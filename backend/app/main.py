@@ -18,13 +18,17 @@ BACKEND_URL = os.getenv(
 )
 FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 
+def _normalize_origin(origin: str) -> str:
+    return origin.strip().rstrip("/")
+
+
 default_origins = [
     "http://localhost:5173",
     FRONTEND_URL,
     os.getenv("CORS_ORIGINS", ""),
 ]
 allowed_origins = [
-    origin.strip()
+    _normalize_origin(origin)
     for origin in default_origins
     if origin and origin.strip()
 ]
@@ -45,7 +49,7 @@ def root():
     return {
         "service": "Todo API",
         "backend": BACKEND_URL,
-        "frontend": FRONTEND_URL or "Deploy the frontend service to get a URL",
+        "frontend": _normalize_origin(FRONTEND_URL) if FRONTEND_URL else "Deploy the frontend service to get a URL",
         "endpoints": {
             "health": f"{BACKEND_URL}/api/health",
             "todos": f"{BACKEND_URL}/api/todos",
