@@ -5,11 +5,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 
+def _uses_internal_railway_network(url: str) -> bool:
+    return ".railway.internal" in url
+
+
 def _normalize_postgres_url(url: str) -> str:
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
 
-    if url.startswith("postgresql://") and "sslmode=" not in url:
+    if (
+        url.startswith("postgresql://")
+        and "sslmode=" not in url
+        and not _uses_internal_railway_network(url)
+    ):
         separator = "&" if "?" in url else "?"
         url = f"{url}{separator}sslmode=require"
 
@@ -28,10 +36,10 @@ def get_database_url() -> str:
         pg_port = os.getenv("PGPORT", "5432")
         pg_database = os.getenv("PGDATABASE", "railway")
         password = quote_plus(pg_password)
-        return (
-            f"postgresql://{pg_user}:{password}@{pg_host}:{pg_port}/{pg_database}"
-            "?sslmode=require"
-        )
+        url = f"postgresql://{pg_user}:{password}@{pg_host}:{pg_port}/{pg_database}"
+        if not _uses_internal_railway_network(url):
+            url = f"{url}?sslmode=require"
+        return url
 
     return "sqlite:///./todos.db"
 
