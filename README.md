@@ -70,16 +70,12 @@ npm run dev
 
 1. Railway Project → **+ New** → **GitHub Repo** → 选 `wallstreetinsights/todolist`
 2. **Root Directory** 设为 `frontend`
-3. **Variables** 添加：
-   ```
-   VITE_API_URL=https://perfect-courtesy-production-44b9.up.railway.app
-   ```
-   （仓库已包含 `frontend/.env.production`，即使不手动设置也会用该地址构建）
-4. **Generate Domain** 获取 Frontend 公网地址
-5. 回到 **Backend** 服务 Variables，添加：
-   ```
-   FRONTEND_URL=https://你的前端域名.up.railway.app
-   ```
+3. **Variables**：一般不需要手动设置（`frontend/.env.production` 已包含 Backend 地址）
+4. **Generate Domain** 获取 Frontend 公网地址，例如：  
+   `https://todolist-production-97ed.up.railway.app`
+5. 回到 **Backend（perfect-courtesy）** 服务 Variables，添加：  
+   `FRONTEND_URL=https://todolist-production-97ed.up.railway.app`  
+   （**不要**把 `FRONTEND_URL` 配在 Frontend 服务上）
 6. Redeploy Backend（让 CORS 允许前端域名）
 
 ### Backend 环境变量
