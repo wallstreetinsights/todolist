@@ -2,12 +2,29 @@ import { useEffect, useState } from 'react'
 import { createTodo, deleteTodo, fetchTodos, updateTodo } from './api'
 import './App.css'
 
+const THEME_KEY = 'todolist-theme'
+
+function getInitialTheme() {
+  const saved = localStorage.getItem(THEME_KEY)
+  if (saved === 'light' || saved === 'dark') {
+    return saved
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 function App() {
+  const [theme, setTheme] = useState(getInitialTheme)
   const [todos, setTodos] = useState([])
   const [title, setTitle] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem(THEME_KEY, theme)
+  }, [theme])
 
   const loadTodos = async () => {
     try {
@@ -68,11 +85,25 @@ function App() {
     }
   }
 
+  const toggleTheme = () => {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }
+
   return (
     <main className="app">
       <section className="card">
         <header className="header">
-          <p className="eyebrow">FastAPI + React</p>
+          <div className="header-top">
+            <p className="eyebrow">FastAPI + React</p>
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+            >
+              {theme === 'dark' ? '☀️ 浅色' : '🌙 深色'}
+            </button>
+          </div>
           <h1>Todo List</h1>
           <p className="subtitle">输入任务，调用接口，后端写入数据库。</p>
         </header>
