@@ -12,17 +12,46 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Todo API", version="1.0.0")
 
-allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "https://perfect-courtesy-production-44b9.up.railway.app",
+)
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+
+default_origins = [
+    "http://localhost:5173",
+    FRONTEND_URL,
+    os.getenv("CORS_ORIGINS", ""),
+]
+allowed_origins = [
+    origin.strip()
+    for origin in default_origins
+    if origin and origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in allowed_origins if origin.strip()],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(todos.router)
+
+
+@app.get("/")
+def root():
+    return {
+        "service": "Todo API",
+        "backend": BACKEND_URL,
+        "frontend": FRONTEND_URL or "Deploy the frontend service to get a URL",
+        "endpoints": {
+            "health": f"{BACKEND_URL}/api/health",
+            "todos": f"{BACKEND_URL}/api/todos",
+            "docs": f"{BACKEND_URL}/docs",
+        },
+    }
 
 
 @app.get("/api/health")
