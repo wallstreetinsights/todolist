@@ -1,7 +1,9 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import Base, engine
@@ -12,56 +14,49 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Todo API", version="1.0.0")
 
-BACKEND_URL = os.getenv(
-    "BACKEND_URL",
-    "https://perfect-courtesy-production-44b9.up.railway.app",
-)
-FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+SERVE_FRONTEND = STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists()
 
-def _normalize_origin(origin: str) -> str:
-    return origin.strip().rstrip("/")
-
-
-default_origins = [
-    "http://localhost:5173",
-    FRONTEND_URL,
-    os.getenv("CORS_ORIGINS", ""),
-]
-allowed_origins = [
-    _normalize_origin(origin)
-    for origin in default_origins
-    if origin and origin.strip()
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if not SERVE_FRONTEND:
+    allowed_origins = [
+        origin.strip().rstrip("/")
+        for origin in [
+            "http://localhost:5173",
+            os.getenv("FRONTEND_URL", ""),
+            os.getenv("CORS_ORIGINS", ""),
+        ]
+        if origin and origin.strip()
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(todos.router)
-
-
-@app.get("/")
-def root():
-    return {
-        "service": "Todo API",
-        "backend": BACKEND_URL,
-        "frontend": _normalize_origin(FRONTEND_URL) if FRONTEND_URL else "Deploy the frontend service to get a URL",
-        "endpoints": {
-            "health": f"{BACKEND_URL}/api/health",
-            "todos": f"{BACKEND_URL}/api/todos",
-            "docs": f"{BACKEND_URL}/docs",
-        },
-    }
 
 
 @app.get("/api/health")
 def health():
     try:
         check_database_connection()
-        return {"status": "ok", "database": "connected"}
+        return {"status": "ok", "database": "connected", "frontend": SERVE_FRONTEND}
     except SQLAlchemyError as exc:
         return {"status": "degraded", "database": "disconnected", "detail": str(exc)}
+
+
+if SERVE_FRONTEND:
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="frontend")
+else:
+
+    @app.get("/")
+    def root():
+        return {
+            "service": "Todo API",
+            "message": "Frontend static files not found. Use Docker build or run frontend separately.",
+            "health": "/api/health",
+            "docs": "/docs",
+            "todos": "/api/todos",
+        }
